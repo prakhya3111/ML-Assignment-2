@@ -20,6 +20,7 @@ st.set_page_config(page_title="Obesity Classification App")
 st.title("Obesity Level Classification")
 st.write("Upload test.csv file to predict obesity levels.")
 
+# Download Sample Test File
 st.subheader("Download Sample Test File")
 
 with open("test.csv", "rb") as file:
@@ -30,44 +31,53 @@ with open("test.csv", "rb") as file:
         mime="text/csv"
     )
 
-# Model Selection
-model_options = {
-    "Logistic Regression": "model/logistic_regression.pkl",
-    "Decision Tree": "model/decision_tree.pkl",
-    "K-Nearest Neighbors": "model/k-nearest_neighbors.pkl",
-    "Naive Bayes": "model/naive_bayes.pkl",
-    "Random Forest": "model/random_forest.pkl",
-    "XGBoost": "model/xgboost.pkl"
-}
-
-selected_model_name = st.selectbox("Select Model", list(model_options.keys()))
-MODEL_PATH = model_options[selected_model_name]
-
-# Load Saved Objects
-SCALER_PATH = "model/scaler.pkl"
-FEATURE_ENCODER_PATH = "model/feature_label_encoders.pkl"
-TARGET_ENCODER_PATH = "model/target_label_encoder.pkl"
-
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
-
-with open(SCALER_PATH, "rb") as f:
-    scaler = pickle.load(f)
-
-with open(FEATURE_ENCODER_PATH, "rb") as f:
-    feature_encoders = pickle.load(f)
-
-with open(TARGET_ENCODER_PATH, "rb") as f:
-    target_encoder = pickle.load(f)
-
 # File Upload
+st.subheader("Upload Test File")
+
 uploaded_file = st.file_uploader("Upload test.csv file", type=["csv"])
 
 if uploaded_file is not None:
 
-    df = pd.read_csv(uploaded_file)
+    original_df = pd.read_csv(uploaded_file)
+
+    rows, cols = original_df.shape
+    st.success(f"Uploaded file contains {rows} rows and {cols} columns.")
+
     st.subheader("Uploaded Data")
-    st.dataframe(df.head())
+    st.dataframe(original_df)  # Scrollable table
+
+    # Model Selection
+    model_options = {
+        "Logistic Regression": "model/logistic_regression.pkl",
+        "Decision Tree": "model/decision_tree.pkl",
+        "K-Nearest Neighbors": "model/k-nearest_neighbors.pkl",
+        "Naive Bayes": "model/naive_bayes.pkl",
+        "Random Forest": "model/random_forest.pkl",
+        "XGBoost": "model/xgboost.pkl"
+    }
+
+    selected_model_name = st.selectbox("Select Model", list(model_options.keys()))
+    MODEL_PATH = model_options[selected_model_name]
+
+    # Load Saved Objects
+    SCALER_PATH = "model/scaler.pkl"
+    FEATURE_ENCODER_PATH = "model/feature_label_encoders.pkl"
+    TARGET_ENCODER_PATH = "model/target_label_encoder.pkl"
+
+    with open(MODEL_PATH, "rb") as f:
+        model = pickle.load(f)
+
+    with open(SCALER_PATH, "rb") as f:
+        scaler = pickle.load(f)
+
+    with open(FEATURE_ENCODER_PATH, "rb") as f:
+        feature_encoders = pickle.load(f)
+
+    with open(TARGET_ENCODER_PATH, "rb") as f:
+        target_encoder = pickle.load(f)
+
+    # Work on copy
+    df = original_df.copy()
 
     # Handle Target Column
     if "NObeyesdad" in df.columns:
@@ -77,7 +87,7 @@ if uploaded_file is not None:
     else:
         y_true_encoded = None
 
-    # Keeping copy for results display
+    # Keep copy for displaying predictions
     result_df = df.copy()
 
     # Preprocessing
@@ -91,6 +101,7 @@ if uploaded_file is not None:
     # Scale numerical features
     df[numerical_cols] = scaler.transform(df[numerical_cols])
 
+    # Ensure correct column order
     df = df[model.feature_names_in_]
 
     # Prediction
@@ -100,7 +111,7 @@ if uploaded_file is not None:
     result_df["Predicted_Obesity_Level"] = decoded_predictions
 
     st.subheader("Prediction Results")
-    st.dataframe(result_df.head())
+    st.dataframe(result_df)  # Scrollable table
 
     # Evaluation Section
     if y_true_encoded is not None:
